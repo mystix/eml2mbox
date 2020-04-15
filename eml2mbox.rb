@@ -8,7 +8,7 @@
 #            -a assume all files are emails - ignore extensions                              #
 #            -c Remove CRs (^M) appearing at end of lines (Unix)                             #
 #            -f Act on a single .eml file, rather than an .eml dir                           #
-#            -l Remove LFs appearing at beggining of lines (old Mac) - not tested            #
+#            -l Remove LFs appearing at beginning of lines (old Mac) - not tested            #
 #            -h Show help and exit                                                           #
 #            -m Handle multiline From: headers (RFC822 phrase + routed_addr)                 #
 #            -s Don't use standard mbox postmark formatting (for From_ line)                 #
@@ -59,7 +59,7 @@ class FileInMemory
     def addLine(line)
         line = line.force_encoding("ISO-8859-1").encode("utf-8", replace: nil)
 
-        # If the line is a 'false' From line, add a '>' to its beggining
+        # If the line is a 'false' From line, add a '>' to its beginning
         line = line.sub(/From/, '>From') if line =~ /^From/ and @from!=nil
 
         # If previous line was a two-liner From header without address concatenate both
@@ -177,16 +177,16 @@ def formMboxDate(time,timezone)
         return time.strftime("%a %b %d %H:%M:%S %Y")
     else
         if $switches["zoneYearOrder"]
-            return time.strftime("%a %b %d %H:%M:%S "+timezone.to_s+" %Y")
+            return time.strftime("%a %b %d %H:%M:%S #{timezone.to_s} %Y")
         else 
-            return time.strftime("%a %b %d %H:%M:%S %Y "+timezone.to_s)
+            return time.strftime("%a %b %d %H:%M:%S %Y #{timezone.to_s}")
         end
     end
 end
 
 # Extracts all switches from the command line and returns
 # a hashmap with valid switch names as keys and booleans as values
-# Moves real params to the beggining of the ARGV array
+# Moves real params to the start of the ARGV array
 def extractSwitches()
     switches = Hash.new(false)  # All switches (values) default to false
     i=0
@@ -205,7 +205,7 @@ def extractSwitches()
             puts "\nWill show help and exit"
         elsif ARGV[i]=="-l"
             switches["removeLFs"] = true
-            puts "\nWill fix lines beggining with a LF"
+            puts "\nWill fix lines beginning with a LF"
         elsif ARGV[i]=="-m"
             switches["multilineFrom"] = true
             puts "\nWill handle Outlook phrase + route_addr multiline From_ headers"
@@ -220,7 +220,7 @@ def extractSwitches()
         end
         i = i+1
     end
-    # Move real arguments to the beggining of the array
+    # Move real arguments to the start of the array
     ARGV[0] = ARGV[i]
     ARGV[1] = ARGV[i+1]
     return switches
@@ -232,7 +232,7 @@ def showHelp()
 #         Switches:                                                                          #
 #            -a assume all files are emails - ignore extensions                              #
 #            -c Remove CRs (^M) appearing at end of lines (Unix)                             #
-#            -l Remove LFs appearing at beggining of lines (old Mac) - not tested            #
+#            -l Remove LFs appearing at beginning of lines (old Mac) - not tested            #
 #            -h Show help and exit                                                           #
 #            -m Handle multiline From: headers (RFC822 phrase + routed_addr)                 #
 #            -s Don't use standard mbox postmark formatting (for From_ line)                 #
@@ -258,8 +258,8 @@ end
 $stdout.sync = true
 
 # Extract specified directory with emls and the target archive (if any)
-emlDir = "."     # default if not specified
-if ARGV[0]!=nil
+emlDir = __dir__     # default if not specified
+if ARGV[0]
   if $switches["singleFile"]
     emlDir = File.dirname(ARGV[0])
     emlFile = File.basename(ARGV[0])
@@ -267,17 +267,16 @@ if ARGV[0]!=nil
     emlDir = ARGV[0]
   end
 end
-mboxArchive = emlDir + "archive.mbox"    # default if not specified
-mboxArchive = ARGV[1] if ARGV[1] != nil
+mboxArchive = ARGV[1] || File.join(emlDir, "archive.mbox") # default if not specified
 
 # Show specified settings
-puts "\nSpecified dir : "+emlDir
-puts "Specified file: "+mboxArchive+"\n"
+puts "\nSpecified dir : #{emlDir}"
+puts "Specified file: #{mboxArchive}\n"
 
 # Check if destination file exists. If yes allow user to select an option.
 canceled = false
 if FileTest.exist?(mboxArchive)
-    print "\nFile ["+mboxArchive+"] exists! Please select: [A]ppend  [O]verwrite  [C]ancel (default) "
+    print "\nFile [#{mboxArchive}] exists! Please select: [A]ppend  [O]verwrite  [C]ancel (default) "
     sel = STDIN.gets.chomp
     if sel == 'A' or sel == 'a'
         aFile = File.new(mboxArchive, "a");
@@ -295,7 +294,7 @@ end
 if FileTest.directory?(emlDir)
     Dir.chdir(emlDir)
 else
-    puts "\n["+emlDir+"] is not a directory (might not exist). Please specify a valid dir"
+    puts "\n[#{emlDir}] is not a directory (might not exist). Please specify a valid dir"
     exit(0)
 end
 
@@ -331,7 +330,7 @@ if not canceled
         $errors = false
         filenum += 1
         filenumtxt = filenum.to_s.rjust("#{files.size}".length)
-        print "#{filenumtxt}/#{files.size}: "+x+"  "
+        print "#{filenumtxt}/#{files.size}: #{x}  "
         thisFile = FileInMemory.new()
         File.open(x).each  {|item| thisFile.addLine(item) }
         lines = thisFile.getProcessedLines
